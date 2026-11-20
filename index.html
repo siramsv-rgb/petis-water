@@ -67,6 +67,7 @@
       <p class="err" id="pinErr"></p>
       <div class="pad" id="pad"></div>
     </div>
+    <p class="count" style="font-size:13px;line-height:1.5;margin:10px 8px 0">เปิดจาก Safari ปกติ (ไม่ใช่โหมดส่วนตัว และไม่ใช่เบราว์เซอร์ในแอป LINE) เครื่องจึงจะจำคุณได้</p>
     <button class="link" onclick="show('v-pick')">← เลือกชื่อใหม่</button>
   </section>
 
@@ -77,6 +78,7 @@
       <p class="sub">ชื่อย่อ <b id="mIni"></b></p>
       <button class="big" id="btnTake" onclick="take(false)">เบิกน้ำ 1 ขวด</button>
       <p class="count" id="mCount">&nbsp;</p>
+      <p class="count hide" id="mWarn" style="color:#b45309;margin-top:12px;line-height:1.5"></p>
     </div>
     <div class="row">
       <button class="btn red" onclick="openAbn()">🍼 พบขวดค้าง</button>
@@ -239,9 +241,19 @@ async function key(k){
 function logout(){ store.del(KEY); user = null; show('v-pick'); }
 
 /* ---------- หน้าหลัก ---------- */
+function storageOK(){
+  try{ localStorage.setItem('__t','1'); const ok = localStorage.getItem('__t') === '1'; localStorage.removeItem('__t'); return ok; }
+  catch(e){ return false; }
+}
 function paintMain(){
   $('mName').textContent = user.name;
   $('mIni').textContent = user.initials;
+  const ua = navigator.userAgent || '';
+  const w = $('mWarn'); let msg = '';
+  if (/Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(ua)) msg = 'คุณเปิดจากในแอป (LINE/Facebook) ซึ่งไม่จำการล็อกอิน กรุณาเปิดลิงก์นี้ใน Safari แทน';
+  else if (!storageOK()) msg = 'เบราว์เซอร์นี้ไม่ยอมจำข้อมูล (อาจอยู่ในโหมดส่วนตัว) กรุณาปิดโหมดส่วนตัวแล้วเปิดใหม่';
+  else if (/iPhone|iPad/.test(ua) && !navigator.standalone) msg = 'เคล็ดลับ: แตะปุ่มแชร์ → “เพิ่มลงในหน้าจอโฮม” จะมีไอคอนกดเบิกน้ำได้ทันที ไม่ต้องสแกนทุกครั้ง';
+  w.textContent = msg; w.classList.toggle('hide', !msg);
 }
 async function refresh(){
   if (!user) return;
