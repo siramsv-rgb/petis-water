@@ -205,7 +205,7 @@ async function init(){
     loadStaff().catch(()=>{});
   } else {
     try { await loadStaff(); show('v-pick'); }
-    catch(e){ $('v-load').innerHTML = '<p class="err">โหลดไม่สำเร็จ ลองสแกนใหม่อีกครั้ง</p>'; }
+    catch(e){ $('v-load').innerHTML = '<p class="err">โหลดไม่สำเร็จ ลองสแกนใหม่อีกครั้ง</p><p class="sub" style="font-size:12px">(' + esc(e && e.message || e) + ')</p>'; }
   }
 }
 
