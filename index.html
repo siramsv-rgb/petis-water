@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>PETiS น้ำดื่ม</title>
+<style>
+  :root{--blue:#0b6bcb;--blue-d:#08549f;--green:#16a34a;--red:#dc2626;--amber:#d97706;--ink:#0f172a;--mute:#64748b;--bg:#f1f5f9;--card:#fff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .wrap{max-width:460px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:18px;margin:0 0 16px;color:var(--blue);text-align:center;letter-spacing:.3px}
+  .card{background:var(--card);border-radius:18px;padding:22px;box-shadow:0 2px 10px rgba(15,23,42,.06);margin-bottom:14px}
+  .hello{font-size:20px;text-align:center;margin:0 0 4px}
+  .sub{color:var(--mute);text-align:center;font-size:15px;margin:0}
+  .big{display:block;width:100%;border:0;border-radius:18px;padding:28px 12px;font-size:26px;font-weight:700;color:#fff;background:var(--blue);margin:18px 0 6px;cursor:pointer;font-family:inherit}
+  .big:active{background:var(--blue-d);transform:scale(.99)}
+  .big[disabled]{opacity:.6}
+  .row{display:flex;gap:10px}
+  .btn{flex:1;border:1px solid #cbd5e1;background:#fff;border-radius:12px;padding:14px 8px;font-size:16px;font-family:inherit;cursor:pointer;color:var(--ink)}
+  .btn.red{border-color:#fecaca;color:var(--red)}
+  .btn.solid{background:var(--blue);color:#fff;border:0}
+  .btn.amber{background:var(--amber);color:#fff;border:0}
+  .link{background:none;border:0;color:var(--mute);font-size:14px;text-decoration:underline;display:block;margin:14px auto 0;font-family:inherit;cursor:pointer}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .grid button{border:1px solid #cbd5e1;background:#fff;border-radius:12px;padding:12px 4px;font-family:inherit;cursor:pointer;color:var(--ink)}
+  .grid b{display:block;font-size:22px;color:var(--blue)}
+  .grid span{font-size:12px;color:var(--mute)}
+  .ini{font-size:96px;font-weight:800;text-align:center;color:var(--blue);line-height:1;margin:8px 0;letter-spacing:4px}
+  .ok{color:var(--green);text-align:center;font-size:20px;font-weight:700;margin:0}
+  .warn{color:var(--amber)}
+  .pinbox{display:flex;justify-content:center;gap:12px;margin:16px 0}
+  .pinbox i{width:18px;height:18px;border-radius:50%;border:2px solid var(--blue)}
+  .pinbox i.on{background:var(--blue)}
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pad button{font-size:26px;padding:16px 0;border-radius:14px;border:1px solid #cbd5e1;background:#fff;font-family:inherit;cursor:pointer}
+  .err{color:var(--red);text-align:center;min-height:22px;margin:8px 0 0;font-size:15px}
+  .count{font-size:15px;text-align:center;color:var(--mute)}
+  .count b{color:var(--ink);font-size:18px}
+  .hide{display:none}
+  .spin{width:34px;height:34px;border:4px solid #cbd5e1;border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;margin:40px auto}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💧 PETiS น้ำดื่ม</h1>
+
+  <!-- กำลังโหลด -->
+  <section id="v-load"><div class="spin"></div></section>
+
+  <!-- เลือกชื่อ (ครั้งแรก) -->
+  <section id="v-pick" class="hide">
+    <div class="card">
+      <p class="hello">ตั้งค่าครั้งแรก</p>
+      <p class="sub">แตะชื่อของคุณ เครื่องนี้จะจำไว้</p>
+    </div>
+    <div class="grid" id="pickGrid"></div>
+  </section>
+
+  <!-- ใส่ PIN -->
+  <section id="v-pin" class="hide">
+    <div class="card">
+      <p class="hello" id="pinName"></p>
+      <p class="sub">ใส่ PIN 4 หลัก</p>
+      <div class="pinbox" id="pinDots"><i></i><i></i><i></i><i></i></div>
+      <p class="err" id="pinErr"></p>
+      <div class="pad" id="pad"></div>
+    </div>
+    <button class="link" onclick="show('v-pick')">← เลือกชื่อใหม่</button>
+  </section>
+
+  <!-- หน้าหลัก -->
+  <section id="v-main" class="hide">
+    <div class="card">
+      <p class="hello">สวัสดี คุณ<span id="mName"></span></p>
+      <p class="sub">ชื่อย่อ <b id="mIni"></b></p>
+      <button class="big" id="btnTake" onclick="take(false)">เบิกน้ำ 1 ขวด</button>
+      <p class="count" id="mCount">&nbsp;</p>
+    </div>
+    <div class="row">
+      <button class="btn red" onclick="openAbn()">🍼 พบขวดค้าง</button>
+    </div>
+    <button class="link" onclick="logout()">ไม่ใช่ฉัน / เปลี่ยนผู้ใช้</button>
+  </section>
+
+  <!-- เกินโควตา -->
+  <section id="v-over" class="hide">
+    <div class="card">
+      <p class="hello warn">⚠️ วันนี้เบิกครบโควตาแล้ว</p>
+      <p class="sub" id="overTxt"></p>
+      <p class="sub" style="margin-top:10px">ดื่มขวดเดิมให้หมดก่อนนะ ถ้าจำเป็นต้องเบิกเพิ่ม ระบบจะบันทึกว่า <b>เกินโควตา</b></p>
+      <div class="row" style="margin-top:18px">
+        <button class="btn" onclick="show('v-main')">ยกเลิก</button>
+        <button class="btn amber" onclick="take(true)">ยืนยันเบิกเพิ่ม</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- สำเร็จ -->
+  <section id="v-done" class="hide">
+    <div class="card">
+      <p class="ok">✓ บันทึกแล้ว</p>
+      <p class="sub" style="margin-top:14px">เขียนชื่อย่อนี้ที่ขวดด้วย marker</p>
+      <div class="ini" id="dIni"></div>
+      <p class="count" id="dCount"></p>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" id="btnUndo" onclick="undo()">กดพลาด ยกเลิก</button>
+        <button class="btn solid" onclick="show('v-main')">เสร็จ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- พบขวดค้าง: เลือกชื่อย่อ -->
+  <section id="v-abn" class="hide">
+    <div class="card">
+      <p class="hello">พบขวดค้าง</p>
+      <p class="sub">ขวดเขียนชื่อย่ออะไรไว้?</p>
+    </div>
+    <div class="grid" id="abnGrid"></div>
+    <button class="link" onclick="show('v-main')">← กลับ</button>
+  </section>
+
+  <!-- พบขวดค้าง: ปริมาณ -->
+  <section id="v-abn2" class="hide">
+    <div class="card">
+      <p class="hello">ขวดของ <b id="abnWho"></b></p>
+      <p class="sub">น้ำเหลือประมาณเท่าไร?</p>
+      <div class="row" style="margin-top:18px">
+        <button class="btn" onclick="sendAbn('เหลือน้อยกว่าครึ่ง')">น้อยกว่าครึ่ง</button>
+        <button class="btn red" onclick="sendAbn('เหลือเกินครึ่ง')">เกินครึ่ง</button>
+      </div>
+    </div>
+    <button class="link" onclick="show('v-abn')">← กลับ</button>
+  </section>
+
+  <!-- ขอบคุณ -->
+  <section id="v-thx" class="hide">
+    <div class="card">
+      <p class="ok">✓ ขอบคุณที่รายงาน</p>
+      <p class="sub" style="margin-top:10px">วางขวดไว้ที่จุดรวมขวดค้างได้เลย</p>
+      <button class="big" style="font-size:20px;padding:16px" onclick="show('v-main')">กลับหน้าหลัก</button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ---------- storage (กันกรณีเบราว์เซอร์ไม่ให้เก็บ) ---------- */
+const mem = {};
+const store = {
+  get(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : (mem[k]||null); }catch(e){ return mem[k]||null; } },
+  set(k,v){ mem[k]=v; try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ delete mem[k]; try{ localStorage.removeItem(k); }catch(e){} }
+};
+const KEY = 'petis_water_user';
+
+/* ---------- ตั้งค่า: วาง URL ของ Apps Script Web app (ลงท้าย /exec) ---------- */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzbNryfJupbGMD4KgROpakPXTNeYOGjCTo1SH3_kabSDWlWtZO1aiAs99ciJ-Oqrz8-/exec';
+
+/* ---------- เรียก Apps Script ---------- */
+async function call(fn, ...args){
+  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn, args }) });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'ERROR');
+  return j.data;
+}
+
+let user = store.get(KEY);   // {id, name, initials, token}
+let staff = [];
+let pinFor = null, pin = '';
+let abnOwner = null;
+let undoTimer = null;
+
+function $(id){ return document.getElementById(id); }
+function show(id){
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('hide', s.id !== id));
+  if (id === 'v-main') refresh();
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function onAuthFail(e){
+  if (String(e && e.message || e).indexOf('AUTH') >= 0){
+    store.del(KEY); user = null; loadStaff().then(() => show('v-pick'));
+    alertMsg('กรุณาเลือกชื่อและใส่ PIN ใหม่');
+    return true;
+  }
+  return false;
+}
+function alertMsg(t){ $('mCount').textContent = t; }
+
+/* ---------- เริ่มต้น ---------- */
+async function loadStaff(){
+  staff = await call('apiStaffList');
+  $('pickGrid').innerHTML = staff.map(s =>
+    `<button onclick="pickName('${esc(s.id)}')"><b>${esc(s.initials)}</b><span>${esc(s.name)}</span></button>`).join('');
+  $('abnGrid').innerHTML = staff.map(s =>
+    `<button onclick="pickAbn('${esc(s.initials)}')"><b>${esc(s.initials)}</b><span>${esc(s.name)}</span></button>`).join('') +
+    `<button onclick="pickAbn('')"><b>?</b><span>ไม่มีชื่อ/อ่านไม่ออก</span></button>`;
+}
+
+async function init(){
+  if (user){
+    paintMain();
+    show('v-main');           // แสดงทันทีจากข้อมูลที่จำไว้ ไม่ต้องรอ server
+    loadStaff().catch(()=>{});
+  } else {
+    try { await loadStaff(); show('v-pick'); }
+    catch(e){ $('v-load').innerHTML = '<p class="err">โหลดไม่สำเร็จ ลองสแกนใหม่อีกครั้ง</p>'; }
+  }
+}
+
+/* ---------- เลือกชื่อ + PIN ---------- */
+function pickName(id){
+  pinFor = staff.find(s => s.id === id); pin = '';
+  $('pinName').textContent = pinFor.name + ' (' + pinFor.initials + ')';
+  $('pinErr').textContent = '';
+  dots(); show('v-pin');
+}
+function buildPad(){
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  $('pad').innerHTML = keys.map(k => k === '' ? '<span></span>' : `<button onclick="key('${k}')">${k}</button>`).join('');
+}
+function dots(){ [...$('pinDots').children].forEach((d,i) => d.classList.toggle('on', i < pin.length)); }
+async function key(k){
+  if (k === '⌫'){ pin = pin.slice(0,-1); dots(); return; }
+  if (pin.length >= 4) return;
+  pin += k; dots();
+  if (pin.length === 4){
+    $('pinErr').textContent = 'กำลังตรวจสอบ...';
+    try {
+      const r = await call('apiLogin', pinFor.id, pin);
+      if (!r.ok){ $('pinErr').textContent = r.msg; pin = ''; dots(); return; }
+      user = Object.assign({}, r.staff, { token: r.token });
+      store.set(KEY, user);
+      paintMain(); show('v-main');
+    } catch(e){ $('pinErr').textContent = 'เชื่อมต่อไม่สำเร็จ ลองใหม่'; pin = ''; dots(); }
+  }
+}
+function logout(){ store.del(KEY); user = null; show('v-pick'); }
+
+/* ---------- หน้าหลัก ---------- */
+function paintMain(){
+  $('mName').textContent = user.name;
+  $('mIni').textContent = user.initials;
+}
+async function refresh(){
+  if (!user) return;
+  try {
+    const r = await call('apiStatus', user.id, user.token);
+    $('mCount').innerHTML = `วันนี้เบิกแล้ว <b>${r.today}</b> / ${r.quota} ขวด`;
+  } catch(e){ onAuthFail(e); }
+}
+
+async function take(force){
+  const b = $('btnTake'); b.disabled = true; b.textContent = 'กำลังบันทึก...';
+  try {
+    const r = await call('apiWithdraw', user.id, user.token, !!force);
+    if (r.needConfirm){
+      $('overTxt').textContent = `วันนี้คุณเบิกไปแล้ว ${r.today} ขวด (โควตา ${r.quota} ขวด/วัน)`;
+      show('v-over'); return;
+    }
+    $('dIni').textContent = r.initials;
+    $('mCount').innerHTML = `วันนี้เบิกแล้ว <b>${r.today}</b> / ${r.quota} ขวด`;
+    $('dCount').innerHTML = `วันนี้ขวดที่ <b>${r.today}</b>` + (r.over ? ' <span class="warn">(เกินโควตา)</span>' : '');
+    $('btnUndo').disabled = false; $('btnUndo').textContent = 'กดพลาด ยกเลิก';
+    show('v-done');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => { if (!$('v-done').classList.contains('hide')) show('v-main'); }, 20000);
+  } catch(e){
+    if (!onAuthFail(e)){ alert('บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง'); }
+  } finally {
+    b.disabled = false; b.textContent = 'เบิกน้ำ 1 ขวด';
+  }
+}
+
+async function undo(){
+  const b = $('btnUndo'); b.disabled = true; b.textContent = 'กำลังยกเลิก...';
+  try {
+    const r = await call('apiUndo', user.id, user.token);
+    if (r.ok){ clearTimeout(undoTimer); show('v-main'); }
+    else { b.textContent = r.msg; }
+  } catch(e){ b.textContent = 'ยกเลิกไม่สำเร็จ'; }
+}
+
+/* ---------- พบขวดค้าง ---------- */
+function openAbn(){ show('v-abn'); }
+function pickAbn(ini){ abnOwner = ini; $('abnWho').textContent = ini || '(ไม่มีชื่อ)'; show('v-abn2'); }
+async function sendAbn(level){
+  try {
+    await call('apiReportAbandoned', user.id, user.token, abnOwner, level);
+    show('v-thx');
+  } catch(e){ if (!onAuthFail(e)) alert('ส่งไม่สำเร็จ ลองอีกครั้ง'); }
+}
+
+
+/* ---------- โหมดโปสเตอร์: เปิดด้วย ?poster ---------- */
+if (location.search.indexOf('poster') >= 0){
+  const url = location.origin + location.pathname;
+  document.body.innerHTML = `<div style="max-width:148mm;margin:0 auto;padding:8mm 6mm;text-align:center;font-family:Sarabun,system-ui,sans-serif">
+  <h1 style="font-size:30px;margin:0;color:#0b6bcb">💧 สแกนก่อนเปิดตู้</h1>
+  <h2 style="font-size:18px;margin:4px 0 14px;font-weight:600;color:#475569">บันทึกการเบิกน้ำดื่ม PETiS</h2>
+  <img style="width:62mm;height:62mm;border:3px solid #0b6bcb;border-radius:12px;padding:3mm" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(url)}">
+  <ol style="text-align:left;font-size:17px;line-height:1.55;margin:16px auto 0;max-width:120mm">
+  <li>สแกน QR → แตะ <b>“เบิกน้ำ 1 ขวด”</b></li><li>เขียน <b>ชื่อย่อ</b> ที่ขวดด้วย marker</li><li>ดื่มให้หมดก่อนเบิกขวดใหม่</li></ol>
+  <div style="display:inline-block;margin-top:12px;background:#fef3c7;border-radius:10px;padding:8px 14px;font-size:16px">เจอขวดค้าง? สแกนแล้วกด <b>“พบขวดค้าง”</b></div>
+  <p style="margin-top:14px;font-size:14px;color:#64748b">ครั้งแรก: เลือกชื่อตัวเอง + ใส่ PIN เครื่องจะจำไว้</p>
+  <p style="font-size:11px;color:#94a3b8">${url}</p></div>`;
+  throw new Error('poster');
+}
+
+buildPad();
+init();
+</script>
+</body>
+</html>
